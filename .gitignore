@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+*.so
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# PyTorch models
+*.pt
+
+# Documentation
+.github/
+*.md
+.rustfmt.toml
+
+# Results and tests
+results/
+test_run.sh
