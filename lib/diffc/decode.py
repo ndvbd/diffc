@@ -1,8 +1,19 @@
 import torch
 from lib.diffc.p import P
 
+
 @torch.no_grad()
-def decode(latent_shape, latent_device, latent_dtype, timestep_schedule, noise_prediction_model, gaussian_channel_simulator, chunk_seeds_per_step, Dkl_per_step, seed):
+def decode(
+    latent_shape,
+    latent_device,
+    latent_dtype,
+    timestep_schedule,
+    noise_prediction_model,
+    gaussian_channel_simulator,
+    chunk_seeds_per_step,
+    Dkl_per_step,
+    seed,
+):
     """Decodes a compressed image representation back into its latent space form.
 
     Args:
@@ -28,14 +39,21 @@ def decode(latent_shape, latent_device, latent_dtype, timestep_schedule, noise_p
     noisy_latent = torch.randn(latent_shape, device=latent_device, dtype=latent_dtype)
     current_timestep = 1000
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
-    for step_index, (prev_timestep, chunk_seeds, Dkl) in enumerate(zip(timestep_schedule, chunk_seeds_per_step, Dkl_per_step)):
-        noise_prediction = noise_prediction_model.predict_noise(noisy_latent, current_timestep)
+    for step_index, (prev_timestep, chunk_seeds, Dkl) in enumerate(
+        zip(timestep_schedule, chunk_seeds_per_step, Dkl_per_step)
+    ):
+        noise_prediction = noise_prediction_model.predict_noise(
+            noisy_latent, current_timestep
+        )
         prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep)
         p_mu, std = P(noisy_latent, noise_prediction, current_snr, prev_snr)
-        sample = gaussian_channel_simulator.decode(chunk_seeds, noisy_latent.size(), Dkl, seed=step_index)
-        reshaped_sample = sample.reshape(latent_shape).to(latent_device).to(latent_dtype)
-        noisy_latent = (reshaped_sample * std + p_mu)
+        sample = gaussian_channel_simulator.decode(
+            chunk_seeds, noisy_latent.size(), Dkl, seed=step_index
+        )
+        reshaped_sample = (
+            sample.reshape(latent_shape).to(latent_device).to(latent_dtype)
+        )
+        noisy_latent = reshaped_sample * std + p_mu
         current_snr = prev_snr
-    
+
     return noisy_latent
-    

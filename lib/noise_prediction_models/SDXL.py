@@ -1,10 +1,23 @@
 import torch
-from diffusers import StableDiffusionXLPipeline, DDPMScheduler, AutoencoderKL, UNet2DConditionModel
-from lib.noise_prediction_models.latent_noise_prediction_model import LatentNoisePredictionModel
+from diffusers import (
+    StableDiffusionXLPipeline,
+    DDPMScheduler,
+    AutoencoderKL,
+    UNet2DConditionModel,
+)
+from lib.noise_prediction_models.latent_noise_prediction_model import (
+    LatentNoisePredictionModel,
+)
 
 # TODO this is totally untested Claude code
 class SDXLModel(LatentNoisePredictionModel):
-    def __init__(self, model_id="stabilityai/stable-diffusion-xl-base-1.0", use_refiner=False, device="cuda", dtype=torch.float16):
+    def __init__(
+        self,
+        model_id="stabilityai/stable-diffusion-xl-base-1.0",
+        use_refiner=False,
+        device="cuda",
+        dtype=torch.float16,
+    ):
         """
         Initialize the SDXL model.
         
@@ -16,16 +29,16 @@ class SDXLModel(LatentNoisePredictionModel):
         self.use_refiner = use_refiner
         self.device = device
         self.dtype = dtype
-        
+
         # Initialize the pipeline
-        self.vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16).to("cuda")
+        self.vae = AutoencoderKL.from_pretrained(
+            "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
+        ).to("cuda")
         self.pipe = StableDiffusionXLPipeline.from_pretrained(
-            model_id,
-            torch_dtype=self.dtype,
-            vae=self.vae
+            model_id, torch_dtype=self.dtype, vae=self.vae
         )
         self.pipe = self.pipe.to(self.device)
-        
+
         # Store key components for easy access
 
         self.unet = self.pipe.unet
@@ -41,27 +54,28 @@ class SDXLModel(LatentNoisePredictionModel):
                 subfolder="unet",
                 torch_dtype=self.dtype,
                 use_safetensors=True,
-                variant="fp16"
-            ).to(self.device)
-            
-            # The refiner doesn't use text_encoder_1, only text_encoder_2 and its projections
-            self.refiner_text_encoder_2 = CLIPTextModelWithProjection.from_pretrained(
-                "stabilityai/stable-diffusion-xl-refiner-1.0", 
-                subfolder="text_encoder_2",
-                torch_dtype=self.dtype,
-                variant="fp16"
+                variant="fp16",
             ).to(self.device)
 
-        
+            # The refiner doesn't use text_encoder_1, only text_encoder_2 and its projections
+            self.refiner_text_encoder_2 = CLIPTextModelWithProjection.from_pretrained(
+                "stabilityai/stable-diffusion-xl-refiner-1.0",
+                subfolder="text_encoder_2",
+                torch_dtype=self.dtype,
+                variant="fp16",
+            ).to(self.device)
+
         # Initialize DDPM scheduler with 1000 steps for SNR calculations
-        self.reference_scheduler = DDPMScheduler.from_pretrained(model_id, subfolder="scheduler")
+        self.reference_scheduler = DDPMScheduler.from_pretrained(
+            model_id, subfolder="scheduler"
+        )
         self.reference_scheduler.set_timesteps(num_inference_steps=1000)
-        
+
         # Pre-compute alphas, timesteps, and SNR values for the scheduler
         self.timesteps = self.reference_scheduler.timesteps.to(device)
         alphas = self.reference_scheduler.alphas_cumprod.to(device)
         self.snr_values = torch.sqrt(alphas / (1 - alphas))
-        
+
         # Initialize configuration attributes
         self.prompt_embeds = None
         self.negative_prompt_embeds = None
@@ -84,7 +98,7 @@ class SDXLModel(LatentNoisePredictionModel):
         """
         if timestep == 0:
             return torch.inf
-        return self.snr_values[timestep-1]
+        return self.snr_values[timestep - 1]
 
     def image_to_latent(self, img_pt):
         """
@@ -98,17 +112,17 @@ class SDXLModel(LatentNoisePredictionModel):
         """
         if img_pt.dim() == 3:
             img_pt = img_pt.unsqueeze(0)
-        
+
         # Move input to correct device and type
         img_pt = img_pt.to(device=self.device, dtype=self.dtype) * 2 - 1
-        
+
         # Get VAE scaling factor
         vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-        
+
         # Encode image to latent space
         latent = self.vae.encode(img_pt).latent_dist.sample()
         latent = latent * self.vae.config.scaling_factor
-        
+
         return latent
 
     def latent_to_image(self, latent):
@@ -123,11 +137,11 @@ class SDXLModel(LatentNoisePredictionModel):
         """
         # Scale latents
         latent = latent / self.vae.config.scaling_factor
-        
+
         # Decode to image space
         with torch.no_grad():
             image = self.vae.decode(latent).sample
-            
+
         return (image / 2 + 0.5).clamp(0, 1).detach()
 
     def configure(self, prompt, prompt_guidance, image_width, image_height):
@@ -143,12 +157,12 @@ class SDXLModel(LatentNoisePredictionModel):
         self.guidance_scale = prompt_guidance
         self.image_width = image_width
         self.image_height = image_height
-        
+
         # Get original and target sizes for SDXL conditioning
         original_size = (image_height, image_width)
         target_size = (image_height, image_width)
         crops_coords_top_left = (0, 0)
-        
+
         # Process the prompt through both text encoders
         text_inputs = self.tokenizer(
             prompt,
@@ -158,7 +172,7 @@ class SDXLModel(LatentNoisePredictionModel):
             return_tensors="pt",
         )
         text_input_ids = text_inputs.input_ids.to(self.device)
-        
+
         text_inputs_2 = self.tokenizer_2(
             prompt,
             padding="max_length",
@@ -167,22 +181,26 @@ class SDXLModel(LatentNoisePredictionModel):
             return_tensors="pt",
         )
         text_input_ids_2 = text_inputs_2.input_ids.to(self.device)
-        
+
         # Get prompt embeddings from both encoders
         with torch.no_grad():
             prompt_embeds_1 = self.text_encoder(text_input_ids)[0]
-            prompt_embeds_2 = self.text_encoder_2(text_input_ids_2, output_hidden_states=True)
+            prompt_embeds_2 = self.text_encoder_2(
+                text_input_ids_2, output_hidden_states=True
+            )
             pooled_prompt_embeds = prompt_embeds_2[0]
             prompt_embeds_2 = prompt_embeds_2.hidden_states[-2]
-            
+
         # Concatenate embeddings from both text encoders
         self.prompt_embeds = torch.cat([prompt_embeds_1, prompt_embeds_2], dim=-1)
         self.add_text_embeds = pooled_prompt_embeds
-        
+
         # Handle zero-guidance case
         if prompt_guidance > 1.0:
             # Process empty prompt for classifier-free guidance
-            uncond_tokens = [""] * (len([prompt]) if isinstance(prompt, str) else len(prompt))
+            uncond_tokens = [""] * (
+                len([prompt]) if isinstance(prompt, str) else len(prompt)
+            )
             uncond_input = self.tokenizer(
                 uncond_tokens,
                 padding="max_length",
@@ -191,7 +209,7 @@ class SDXLModel(LatentNoisePredictionModel):
                 return_tensors="pt",
             )
             uncond_input_ids = uncond_input.input_ids.to(self.device)
-            
+
             uncond_input_2 = self.tokenizer_2(
                 uncond_tokens,
                 padding="max_length",
@@ -200,22 +218,26 @@ class SDXLModel(LatentNoisePredictionModel):
                 return_tensors="pt",
             )
             uncond_input_ids_2 = uncond_input_2.input_ids.to(self.device)
-            
+
             with torch.no_grad():
                 negative_prompt_embeds_1 = self.text_encoder(uncond_input_ids)[0]
-                negative_prompt_embeds_2 = self.text_encoder_2(uncond_input_ids_2, output_hidden_states=True)
+                negative_prompt_embeds_2 = self.text_encoder_2(
+                    uncond_input_ids_2, output_hidden_states=True
+                )
                 negative_pooled_prompt_embeds = negative_prompt_embeds_2[0]
                 negative_prompt_embeds_2 = negative_prompt_embeds_2.hidden_states[-2]
-                
-            self.negative_prompt_embeds = torch.cat([negative_prompt_embeds_1, negative_prompt_embeds_2], dim=-1)
+
+            self.negative_prompt_embeds = torch.cat(
+                [negative_prompt_embeds_1, negative_prompt_embeds_2], dim=-1
+            )
             self.negative_add_text_embeds = negative_pooled_prompt_embeds
-        
+
             # Prepare time embeddings
             add_time_ids = self._get_add_time_ids(
                 original_size, crops_coords_top_left, target_size
             )
             self.add_time_ids = torch.cat([add_time_ids, add_time_ids], dim=0)
-            
+
         else:
             self.negative_prompt_embeds = None
             self.negative_add_text_embeds = None
@@ -240,17 +262,21 @@ class SDXLModel(LatentNoisePredictionModel):
         # Handle classifier-free guidance
         if self.guidance_scale > 1.0:
             # Duplicate input for conditional and unconditional paths
-            latent_model_input = torch.cat([noisy_latent] * 2).to(self.device).to(self.dtype)
-            
+            latent_model_input = (
+                torch.cat([noisy_latent] * 2).to(self.device).to(self.dtype)
+            )
+
             # Prepare condition inputs
             prompt_embeds = torch.cat([self.negative_prompt_embeds, self.prompt_embeds])
-            add_text_embeds = torch.cat([self.negative_add_text_embeds, self.add_text_embeds])
-            
+            add_text_embeds = torch.cat(
+                [self.negative_add_text_embeds, self.add_text_embeds]
+            )
+
             # Get both unconditional and conditional predictions
             with torch.no_grad():
                 added_cond_kwargs = {
                     "text_embeds": add_text_embeds,
-                    "time_ids": self.add_time_ids
+                    "time_ids": self.add_time_ids,
                 }
                 noise_pred = unet(
                     latent_model_input,
@@ -258,17 +284,19 @@ class SDXLModel(LatentNoisePredictionModel):
                     encoder_hidden_states=prompt_embeds,
                     added_cond_kwargs=added_cond_kwargs,
                 ).sample
-            
+
             # Apply guidance
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
-            
+            noise_pred = noise_pred_uncond + self.guidance_scale * (
+                noise_pred_text - noise_pred_uncond
+            )
+
         else:
             # Direct prediction without guidance
             with torch.no_grad():
                 added_cond_kwargs = {
                     "text_embeds": self.add_text_embeds,
-                    "time_ids": self.add_time_ids
+                    "time_ids": self.add_time_ids,
                 }
                 noise_pred = unet(
                     noisy_latent,
@@ -276,7 +304,7 @@ class SDXLModel(LatentNoisePredictionModel):
                     encoder_hidden_states=self.prompt_embeds,
                     added_cond_kwargs=added_cond_kwargs,
                 ).sample
-        
+
         return noise_pred
 
     def _get_add_time_ids(self, original_size, crops_coords_top_left, target_size):

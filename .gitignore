@@ -12,7 +12,6 @@ __pycache__/
 
 # Documentation
 .github/
-*.md
 .rustfmt.toml
 
 # Results and tests

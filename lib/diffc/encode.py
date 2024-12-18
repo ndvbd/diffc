@@ -3,15 +3,17 @@ from lib.diffc.utils.p import P
 from lib.diffc.utils.q import Q
 from tqdm import tqdm
 
+
 @torch.no_grad()
 def encode(
-        target_latent,
-        timestep_schedule,
-        noise_prediction_model,
-        gaussian_channel_simulator,
-        manual_dkl_per_step=None,
-        recon_timesteps=[],
-        seed=0):
+    target_latent,
+    timestep_schedule,
+    noise_prediction_model,
+    gaussian_channel_simulator,
+    manual_dkl_per_step=None,
+    recon_timesteps=[],
+    seed=0,
+):
     """Creates a compressed representation of an image using a diffusion model.
 
     Args:
@@ -53,28 +55,42 @@ def encode(
     noisy_recons = []
     noisy_recon_step_indices = []
     recon_timesteps = recon_timesteps.copy()
-    
+
     torch.manual_seed(seed)
-    noisy_latent = torch.randn(target_latent.shape, device=target_latent.device, dtype=target_latent.dtype)
-    
+    noisy_latent = torch.randn(
+        target_latent.shape, device=target_latent.device, dtype=target_latent.dtype
+    )
+
     current_timestep = 1000
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
 
-    for step_index, prev_timestep in tqdm(enumerate(timestep_schedule)): # "previous" as in closer to 1 than the current snr
-        noise_prediction = noise_prediction_model.predict_noise(noisy_latent, current_timestep)
+    for step_index, prev_timestep in tqdm(
+        enumerate(timestep_schedule)
+    ):  # "previous" as in closer to 1 than the current snr
+        noise_prediction = noise_prediction_model.predict_noise(
+            noisy_latent, current_timestep
+        )
         prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep)
         p_mu, std = P(noisy_latent, noise_prediction, current_snr, prev_snr)
         q_mu = Q(noisy_latent, target_latent, current_snr, prev_snr)
         q_mu_flat_normed = ((q_mu - p_mu) / std).flatten().detach().cpu().numpy()
 
-        manual_dkl = None if manual_dkl_per_step is None else manual_dkl_per_step[step_index]
-        
-        sample, chunk_seeds, dkl = gaussian_channel_simulator.encode(q_mu_flat_normed, manual_dkl=manual_dkl, seed=step_index)
+        manual_dkl = (
+            None if manual_dkl_per_step is None else manual_dkl_per_step[step_index]
+        )
+
+        sample, chunk_seeds, dkl = gaussian_channel_simulator.encode(
+            q_mu_flat_normed, manual_dkl=manual_dkl, seed=step_index
+        )
         chunk_seeds_per_step.append(chunk_seeds)
         dkl_per_step.append(dkl)
         sample = torch.tensor(sample)
-        reshaped_sample = sample.reshape(noisy_latent.shape).to(noisy_latent.device).to(noisy_latent.dtype)
-        noisy_latent = (reshaped_sample * std + p_mu)
+        reshaped_sample = (
+            sample.reshape(noisy_latent.shape)
+            .to(noisy_latent.device)
+            .to(noisy_latent.dtype)
+        )
+        noisy_latent = reshaped_sample * std + p_mu
         current_timestep = prev_timestep
         current_snr = prev_snr
 
@@ -83,10 +99,9 @@ def encode(
         while len(recon_timesteps) > 0 and current_timestep <= recon_timesteps[0]:
             save_current_latent = True
             recon_timesteps = recon_timesteps[1:]
-        
+
         if save_current_latent:
             noisy_recons.append(noisy_latent)
             noisy_recon_step_indices.append(step_index)
-    
+
     return chunk_seeds_per_step, dkl_per_step, noisy_recons, noisy_recon_step_indices
-    
