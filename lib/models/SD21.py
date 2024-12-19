@@ -1,4 +1,4 @@
-from lib.noise_prediction_models.SD import SDModel
+from lib.models.SD import SDModel
 import torch
 
 

@@ -75,17 +75,17 @@ gaussian_channel_simulator = GaussianChannelSimulator(
 )
 
 if config.model == "SD1.5":
-    from lib.noise_prediction_models.SD15 import SD15Model
+    from lib.models.SD15 import SD15Model
 
     noise_prediction_model = SD15Model()
 elif config.model == "SD2.1":
-    from lib.noise_prediction_models.SD21 import SD21Model
+    from lib.models.SD21 import SD21Model
 
     noise_prediction_model = SD21Model()
 elif config.model == "SDXL":
-    from lib.noise_prediction_models.SDXL import SDXLModel
-
-    noise_prediction_model = SDXLModel()
+    from lib.models.SDXL import SDXLModel
+    use_refiner = config.get("use_refiner", False)
+    noise_prediction_model = SDXLModel(use_refiner=use_refiner)
 else:
     raise ValueError(f"Unrecognised model: {config.model}")
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import torch
 from diffusers import StableDiffusionPipeline, DDPMScheduler
-from lib.noise_prediction_models.latent_noise_prediction_model import (
+from lib.models.latent_noise_prediction_model import (
     LatentNoisePredictionModel,
 )
 

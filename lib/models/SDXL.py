@@ -5,7 +5,7 @@ from diffusers import (
     AutoencoderKL,
     UNet2DConditionModel,
 )
-from lib.noise_prediction_models.latent_noise_prediction_model import (
+from lib.models.latent_noise_prediction_model import (
     LatentNoisePredictionModel,
 )
 
