@@ -9,7 +9,8 @@ from easydict import EasyDict as edict
 import yaml
 from pathlib import Path
 from lib.blip import BlipCaptioner
-
+import zlib
+import sys
 
 import pandas as pd
 
@@ -139,8 +140,9 @@ for image_path in image_paths:
         bytes = gaussian_channel_simulator.compress_chunk_seeds(
             chunk_seeds_per_step[: step_idx + 1], Dkl_per_step[: step_idx + 1]
         )
-        bpp = len(bytes) * 8 / (img_width * img_height)
-        # TODO: add prompt length to bpp
+        num_pixels = img_width * img_height
+        prompt_bpp = sys.getsizeof(zlib.compress(prompt.encode()))*8 / num_pixels
+        bpp = len(bytes) * 8 / num_pixels + prompt_bpp
 
         timestep = config.encoding_timesteps[step_idx]
         snr = noise_prediction_model.get_timestep_snr(timestep).item()
