@@ -65,7 +65,7 @@ def encode(
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
 
     for step_index, prev_timestep in tqdm(
-        enumerate(timestep_schedule)
+        enumerate(timestep_schedule), total=len(timestep_schedule)
     ):  # "previous" as in closer to 1 than the current snr
         noise_prediction = noise_prediction_model.predict_noise(
             noisy_latent, current_timestep

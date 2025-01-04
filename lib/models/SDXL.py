@@ -105,9 +105,6 @@ class SDXLModel(LatentNoisePredictionModel):
         # Move input to correct device and type
         img_pt = img_pt.to(device=self.device, dtype=self.dtype) * 2 - 1
 
-        # Get VAE scaling factor
-        vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
-
         # Encode image to latent space
         latent = self.vae.encode(img_pt).latent_dist.sample()
         latent = latent * self.vae.config.scaling_factor
@@ -122,7 +119,7 @@ class SDXLModel(LatentNoisePredictionModel):
             latent (torch.Tensor): Latent tensor
             
         Returns:
-            torch.Tensor: Decoded image in range [-1, 1]
+            torch.Tensor: Decoded image in range [0, 1]
         """
         # Scale latents
         latent = latent / self.vae.config.scaling_factor

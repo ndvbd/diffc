@@ -58,7 +58,7 @@ class SDModel(LatentNoisePredictionModel, ABC):
         Convert input image tensor to latent representation.
         
         Args:
-            img_pt (torch.Tensor): Image tensor of shape (B, C, H, W) in range [-1, 1]
+            img_pt (torch.Tensor): Image tensor of shape (B, C, H, W) in range [0, 1]
             
         Returns:
             torch.Tensor: Latent representation
@@ -83,7 +83,7 @@ class SDModel(LatentNoisePredictionModel, ABC):
             latent (torch.Tensor): Latent tensor
             
         Returns:
-            torch.Tensor: Decoded image in range [-1, 1]
+            torch.Tensor: Decoded image in range [0, 1]
         """
         # Scale latents
         latent = latent / self.vae.config.scaling_factor

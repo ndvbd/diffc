@@ -17,7 +17,7 @@ class GaussianChannelSimulator:
         """Simulates a noisy channel with identity covariance and mean mu."""
         dkl = manual_dkl
         if dkl is None:
-            dkl = 0.5 * float((mu ** 2).sum() / np.log(2))
+            dkl = 0.5 * float((mu.astype(np.float32) ** 2).sum() / np.log(2))
 
         chunk_sizes = get_chunk_sizes(dkl, self.max_chunk_size, self.chunk_padding)
         chunk_seeds, sample = chunk_and_encode(

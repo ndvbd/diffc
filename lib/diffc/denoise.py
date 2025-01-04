@@ -1,7 +1,8 @@
 from tqdm import tqdm
 from lib.diffc.utils.alpha_beta import get_alpha_prod_and_beta_prod
+import torch
 
-
+@torch.no_grad()
 def denoise(noisy_latent, latent_timestep, timestep_schedule, noise_prediction_model):
     """
     Perform probability-flow-based denoising upon the noisy latent.
@@ -25,8 +26,8 @@ def denoise(noisy_latent, latent_timestep, timestep_schedule, noise_prediction_m
         timestep_schedule
     ):  # "previous" as in higher than the current snr
         noise_prediction = noise_prediction_model.predict_noise(
-            latent, current_timestep
-        )
+            latent.to(noise_prediction_model.dtype), current_timestep
+        ).to(torch.float32)
         prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep)
 
         alpha_prod_t, beta_prod_t = get_alpha_prod_and_beta_prod(current_snr)
@@ -58,4 +59,4 @@ def denoise(noisy_latent, latent_timestep, timestep_schedule, noise_prediction_m
         current_timestep = prev_timestep
         current_snr = prev_snr
 
-    return latent
+    return latent.to(noisy_latent.dtype)

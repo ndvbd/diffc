@@ -86,6 +86,9 @@ elif config.model == "SDXL":
     from lib.models.SDXL import SDXLModel
     use_refiner = config.get("use_refiner", False)
     noise_prediction_model = SDXLModel(use_refiner=use_refiner)
+elif config.model == 'Flux':
+    from lib.models.Flux import FluxModel
+    noise_prediction_model = FluxModel()
 else:
     raise ValueError(f"Unrecognised model: {config.model}")
 
