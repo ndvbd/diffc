@@ -182,17 +182,11 @@ class FluxModel(LatentNoisePredictionModel):
         height = vae_latent.shape[2]
         width = vae_latent.shape[3]
         
-        print(f"VAE latent shape: {vae_latent.shape}")  # Let's see what we have here
-        
         # Pack the latents into the format expected by transformer
-        latent = vae_latent.view(batch_size, num_channels, height // 2, 2, width // 2, 2)
-        print(f"After initial view: {latent.shape}")
-        
+        latent = vae_latent.view(batch_size, num_channels, height // 2, 2, width // 2, 2)        
         latent = latent.permute(0, 2, 4, 1, 3, 5)
-        print(f"After permute: {latent.shape}")
         
         latent = latent.reshape(batch_size, (height // 2) * (width // 2), num_channels * 4)
-        print(f"Final packed shape: {latent.shape}")
 
         return latent
 
@@ -341,7 +335,7 @@ class FluxModel(LatentNoisePredictionModel):
         alpha_prod_t, beta_prod_t = get_alpha_prod_and_beta_prod(snr)
         x0_hat = ot_flow_latent - sigma * ot_flow_noise_pred
 
-        # TODO: back-calculate the DDPM noise pred from noisy_latent and x0_hat
+        # back-calculate the DDPM noise pred from noisy_latent and x0_hat
         ddpm_noise_pred = (noisy_latent - alpha_prod_t**0.5 * x0_hat) / beta_prod_t**0.5
         # Convert prediction back to DDPM space
         #ddpm_noise_pred = ot_flow_noise_pred * ot_flow_to_ddpm_factor * (alpha_prod_t ** 0.5)
