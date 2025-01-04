@@ -9,13 +9,16 @@ We apply the DiffC algorithm[^1] to [Stable Diffusion](https://huggingface.co/st
 ## Results
 
 ![Visual Comparison](figures/visual-comparison.png)
+
+In the following rate-distortion curves, SD1.5, SD2.1, SDXL, and Flux represent the DiffC algorithm with those respective diffusion models. The dashed horizontal 'VAE' lines represent the best achievable metrics given the fidelity of the model's variational autoencoder.
+
 ![Kodak RD curves](figures/kodak-rd-curves-Qalign.png)
 ![Div2k RD curves](figures/div2k-1024-rd-curves-Qalign.png)
 
 ## Setup
 
 ```
-git clone https://github.com/anonymous-author-3/diffusion-compression.git
+git clone https://github.com/JeremyIV/diffc.git
 cd diffusion-compression
 conda create env -f environment.yml
 conda activate diffusion-compression
@@ -39,10 +42,6 @@ To reconstruct an image/images from their compressed representations, use
 python decompress.py --config configs/SD-1.5-base.yaml --input_dir results/SD-1.5-base/kodak/compressed --output_dir results/SD-1.5-base/kodak/reconstructions
 ```
 
-## Acknowledgements
-
-Thanks to https://github.com/danieleades/arithmetic-coding for the entropy coding library.
-
 ## Citation
 
 ```bibtex
@@ -52,6 +51,10 @@ Thanks to https://github.com/danieleades/arithmetic-coding for the entropy codin
   year = "2024",
 }
 ```
+
+## Acknowledgements
+
+Thanks to https://github.com/danieleades/arithmetic-coding for the entropy coding library.
 
 [^1]: Theis, L., Salimans, T., Hoffman, M. D., & Mentzer, F. (2022). [Lossy compression with gaussian diffusion](https://arxiv.org/abs/2206.08889). arXiv preprint arXiv:2206.08889.
 [^2]: Ho, J., Jain, A., & Abbeel, P. (2020). [Denoising diffusion probabilistic models](https://arxiv.org/abs/2006.11239). Advances in Neural Information Processing Systems, 33, 6840-6851.
