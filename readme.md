@@ -20,7 +20,7 @@ In the following rate-distortion curves, SD1.5, SD2.1, SDXL, and Flux represent 
 ```
 git clone https://github.com/JeremyIV/diffc.git
 cd diffusion-compression
-conda create env -f environment.yml
+conda env create -f environment.yml
 conda activate diffusion-compression
 ```
 
