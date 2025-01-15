@@ -1,6 +1,5 @@
 from lib import image_utils
 import torch
-import clip
 
 
 def get_bpp(seed_tuples, zipf_s_vals, zipf_n_vals, recon_step_idx, num_pixels):
@@ -45,6 +44,7 @@ def get_lpips(recon, gt):
 
 
 def load_clip_model(model_name="ViT-B/32", device=None):
+    import clip
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, preprocess = clip.load(model_name, device=device)

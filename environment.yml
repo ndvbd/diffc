@@ -8,18 +8,20 @@ dependencies:
   - pytorch
   - torchvision
   - torchaudio
-  - pytorch-cuda=12.1
   - cupy
   - rust
   - pip
   - pip:
     - diffusers
+    - transformers
+    - easydict
     - numpy
+    - pandas
     - Pillow
     - PyYAML
     - setuptools
     - setuptools_rust
     - scikit-image
-    - torch
     - tqdm
-    - -e arithmetic-coding/python-bindings
+    - lpips
+    - -e lib/diffc/rcc/arithmetic-coding/python-bindings

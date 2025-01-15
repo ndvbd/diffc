@@ -9,7 +9,7 @@ categories = ["compression", "encoding", "parsing"]
 repository = "https://github.com/danieleades/arithmetic-coding"
 
 [workspace]
-members = [".", "arithmetic-coding-core", "fenwick-model", "python-bindings"]
+members = [".", "arithmetic-coding-core", "python-bindings"]
 
 [workspace.dependencies]
 thiserror = "1.0.30"
@@ -26,13 +26,8 @@ bitstream-io = "2.0.0"
 thiserror = { workspace = true }
 
 [dev-dependencies]
-fenwick-model = { path = "./fenwick-model" }
 criterion = "0.5.1"
 test-case = "3.0.0"
-
-[[bench]]
-name = "sherlock"
-harness = false
 
 [lints]
 workspace = true
