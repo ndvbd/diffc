@@ -37,7 +37,7 @@ python evaluate.py --config configs/SD-1.5-base.yaml --image_dir data/kodak --ou
 To save the compressed representation of an image as a `diffc` file, use
 
 ```
-python compress.py --config configs/SD-1.5-base.yaml --image_dir data/kodak --output_dir results/SD-1.5-base/kodak/compressed
+python compress.py --config configs/SD-1.5-base.yaml --image_dir data/kodak --output_dir results/SD-1.5-base/kodak/compressed --recon_timestep 200
 ```
 
 To reconstruct an image/images from their compressed representations, use
@@ -45,6 +45,8 @@ To reconstruct an image/images from their compressed representations, use
 ```
 python decompress.py --config configs/SD-1.5-base.yaml --input_dir results/SD-1.5-base/kodak/compressed --output_dir results/SD-1.5-base/kodak/reconstructions
 ```
+
+Note that currently, compress and decompress.py only work with `SD-1.5-base.yaml`. To make them work with the other configs, you would need to specify `manual_dkl_per_step` in the config file.
 
 ## Citation
 
