@@ -62,4 +62,15 @@ class GaussianChannelSimulator:
                 s = 1 + 1 / (chunk_dkl + np.exp(-1) * np.log(np.e + 1))
                 zipf_s_vals.append(s)
 
-        return decode_zipf(zipf_s_vals, zipf_n_vals, encoded_bytes)
+        flattened_seeds = decode_zipf(zipf_s_vals, zipf_n_vals, encoded_bytes)
+        chunk_seeds_per_step = []
+        index = 0
+        for dkl in dkl_per_step:
+            chunk_sizes = get_chunk_sizes(dkl, self.max_chunk_size, self.chunk_padding)
+            step_seeds = []
+            for chunk_size in chunk_sizes:
+                step_seeds.append(flattened_seeds[index])
+                index += 1
+            chunk_seeds_per_step.append(step_seeds)
+        return chunk_seeds_per_step
+

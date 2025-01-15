@@ -60,6 +60,22 @@ def get_noise_prediction_model(model_name, config):
     else:
         raise ValueError(f"Unrecognized model: {model_name}")
 
+def write_diffc_file(caption, image_bytes, width, height, step_idx, output_path):
+    # Compress caption with zlib
+    compressed_caption = zlib.compress(caption.encode('utf-8'))
+    caption_length = len(compressed_caption)
+    
+    # Write caption length (4 bytes), width (2 bytes), height (2 bytes), step_idx (2 bytes), 
+    # compressed caption, then image data
+    with open(output_path, 'wb') as f:
+        f.write(struct.pack('<I', caption_length))  # Write length as 4-byte little-endian uint
+        f.write(struct.pack('<H', width))          # Write width as 2-byte little-endian uint
+        f.write(struct.pack('<H', height))         # Write height as 2-byte little-endian uint
+        f.write(struct.pack('<H', step_idx))       # Write step_idx as 2-byte little-endian uint
+        f.write(compressed_caption)
+        f.write(bytes(image_bytes))
+
+
 def compress_image(image_path, output_path, noise_prediction_model, 
                   gaussian_channel_simulator, config, caption=""):
     # Load and preprocess image
@@ -74,7 +90,7 @@ def compress_image(image_path, output_path, noise_prediction_model,
     )
 
     # Encode image
-    chunk_seeds_per_step, Dkl_per_step, _, step_indices = encode(
+    chunk_seeds_per_step, Dkl_per_step, _, recon_step_indices = encode(
         gt_latent,
         config.encoding_timesteps,
         noise_prediction_model,
@@ -84,21 +100,19 @@ def compress_image(image_path, output_path, noise_prediction_model,
     )
     
     # Get the compressed representation
-    step_idx = step_indices[0]  # Only one step since we specified one timestep
+    step_idx = recon_step_indices[0]  # Only one step since we specified one timestep
     bytes_data = gaussian_channel_simulator.compress_chunk_seeds(
         chunk_seeds_per_step[: step_idx + 1], 
         Dkl_per_step[: step_idx + 1]
     )
-    
-    # Compress caption with zlib
-    compressed_caption = zlib.compress(caption.encode('utf-8'))
-    caption_length = len(compressed_caption)
-    
-    # Write caption length (4 bytes), compressed caption, then image data
-    with open(output_path, 'wb') as f:
-        f.write(struct.pack('<I', caption_length))  # Write length as 4-byte little-endian uint
-        f.write(compressed_caption)
-        f.write(bytes(bytes_data))
+
+    write_diffc_file(
+        caption,
+        bytes_data,
+        img_width,
+        img_height,
+        step_idx,
+        output_path)
 
 def main():
     args = parse_args()

@@ -7,6 +7,7 @@ import struct
 
 from lib import image_utils
 from lib.diffc.denoise import denoise
+from lib.diffc.decode import decode
 from lib.diffc.rcc.gaussian_channel_simulator import GaussianChannelSimulator
 
 def parse_args():
@@ -57,6 +58,11 @@ def read_diffc_file(file_path):
         # Read caption length (4 bytes)
         caption_length = struct.unpack('<I', f.read(4))[0]
         
+        # Read width, height, and step_idx (2 bytes each)
+        width = struct.unpack('<H', f.read(2))[0]
+        height = struct.unpack('<H', f.read(2))[0]
+        step_idx = struct.unpack('<H', f.read(2))[0]
+        
         # Read and decompress caption
         compressed_caption = f.read(caption_length)
         caption = zlib.decompress(compressed_caption).decode('utf-8')
@@ -64,36 +70,38 @@ def read_diffc_file(file_path):
         # Read remaining bytes for image data
         image_bytes = list(f.read())
     
-    return caption, image_bytes
+    return caption, width, height, step_idx, image_bytes
 
 def decompress_file(input_path, output_path, noise_prediction_model, 
                    gaussian_channel_simulator, config):
     # Read compressed data
-    caption, compressed_bytes = read_diffc_file(input_path)
+    caption, width, height, step_idx, compressed_bytes = read_diffc_file(input_path)
     
     # Decompress the representation
-    chunk_seeds_per_step, Dkl_per_step = gaussian_channel_simulator.decompress_chunk_seeds(
-        compressed_bytes
+    chunk_seeds_per_step = gaussian_channel_simulator.decompress_chunk_seeds(
+        compressed_bytes, config.manual_dkl_per_step[:step_idx+1]
     )
-    
-    # Get timestep from the number of steps
-    step_idx = len(chunk_seeds_per_step) - 1
+
     timestep = config.encoding_timesteps[step_idx]
     
     # Configure model with caption
     noise_prediction_model.configure(
         caption, 
         config.denoising_guidance_scale,
-        config.image_width,  # These need to be in config now
-        config.image_height
+        width,
+        height
     )
     
-    # Get the noisy reconstruction
-    noisy_recon = gaussian_channel_simulator.decode_chunk_seeds(
+    # Get the noisy reconstruction    
+    noisy_recon = decode(
+        width,
+        height,
+        config.encoding_timesteps,
+        noise_prediction_model,
+        gaussian_channel_simulator,
         chunk_seeds_per_step,
-        Dkl_per_step,
-        noise_prediction_model
-    )
+        config.manual_dkl_per_step,
+        seed=0)
     
     # Denoise
     recon_latent = denoise(
@@ -113,6 +121,8 @@ def main():
     # Load config
     with open(args.config, "r") as f:
         config = edict(yaml.safe_load(f))
+
+    assert config.manual_dkl_per_step is not None, "Config must specify a manual_dkl_per_step to perform decompression."
     
     # Set up output directory
     output_dir = Path(args.output_dir)
