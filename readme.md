@@ -2,8 +2,6 @@
 
 Official implementation of Lossy Compression with Pretrained Diffusion Models by Jeremy Vonderfect and Feng Liu. ArXiv and project page links coming soon.
 
-👷‍♀️UNDER CONSTRUCTION:👷‍♀️ setup and usage instructions for this repo have not been properly tested.
-
 ## Abstract
 
 We present a lossy compression method that can leverage state-of-the-art diffusion models for entropy coding. Our method works _zero-shot_, requiring no additional training of the diffusion model or any ancillary networks. We apply the DiffC algorithm[^1] to
