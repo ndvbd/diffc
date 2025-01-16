@@ -10,6 +10,8 @@ We demonstrate that our method is competitive with other state-of-the-art genera
 
 ## Results
 
+We compare our method (DiffC) against [PerCo](https://github.com/Nikolai10/PerCo), [DiffEIC](https://github.com/huai-chang/DiffEIC), [HiFiC](https://github.com/Justin-Tan/high-fidelity-generative-compression), and [MS-ILLM](https://github.com/facebookresearch/NeuralCompression/tree/main/projects/illm).
+
 ![Visual Comparison](figures/visual-comparison.png)
 
 In the following rate-distortion curves, SD1.5, SD2.1, SDXL, and Flux represent the DiffC algorithm with those respective diffusion models. The dashed horizontal 'VAE' lines represent the best achievable metrics given the fidelity of the model's variational autoencoder.
