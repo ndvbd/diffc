@@ -1,6 +1,6 @@
 # Lossy Compression with Pretrained Diffusion Models
 
-Official implementation of Lossy Compression with Pretrained Diffusion Models by Jeremy Vonderfect and Feng Liu. ArXiv and project page links coming soon.
+Official implementation of [Lossy Compression with Pretrained Diffusion Models](https://arxiv.org/abs/2501.09815) by Jeremy Vonderfect and Feng Liu. See our [project page](https://jeremyiv.github.io/diffc-project-page/) for an interactive demo of results.
 
 ## Abstract
 
@@ -51,10 +51,14 @@ Note that currently, compress and decompress.py only work with `SD-1.5-base.yaml
 ## Citation
 
 ```bibtex
-@misc{Vonderfecht2024lossy,
-  author = "{Jeremy Vonderfecht, Feng Liu}",
-  title = "Lossy Compression With Pretrained Diffusion Models",
-  year = "2024",
+@misc{vonderfecht2025lossycompressionpretraineddiffusion,
+      title={Lossy Compression with Pretrained Diffusion Models}, 
+      author={Jeremy Vonderfecht and Feng Liu},
+      year={2025},
+      eprint={2501.09815},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2501.09815}, 
 }
 ```
 
