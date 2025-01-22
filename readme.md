@@ -54,7 +54,7 @@ Note that currently, compress and decompress.py only work with `SD-1.5-base.yaml
 @inproceedings{
   vonderfecht2025lossy,
   title={Lossy Compression with Pretrained Diffusion Models},
-  author={Jeremy Vonderfecht, Feng Liu},
+  author={Jeremy Vonderfecht and Feng Liu},
   booktitle={The Thirteenth International Conference on Learning Representations},
   year={2025},
   url={https://openreview.net/forum?id=raUnLe0Z04}
