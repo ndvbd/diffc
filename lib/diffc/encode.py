@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 @torch.no_grad()
 def encode(
-    target_latent,
+    target_latent, # the real image latent vector
     timestep_schedule,
     noise_prediction_model,
     gaussian_channel_simulator,
@@ -56,10 +56,10 @@ def encode(
     noisy_recon_step_indices = []
     recon_timesteps = recon_timesteps.copy()
 
-    torch.manual_seed(seed)
+    torch.manual_seed(seed) # seed is 0
     noisy_latent = torch.randn(
         target_latent.shape, device=target_latent.device, dtype=target_latent.dtype
-    )
+    ) # generate noise
 
     current_timestep = 1000
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
@@ -68,20 +68,24 @@ def encode(
         enumerate(timestep_schedule), total=len(timestep_schedule)
     ):  # "previous" as in closer to 1 than the current snr
         noise_prediction = noise_prediction_model.predict_noise(
-            noisy_latent, current_timestep
+            noisy_latent, current_timestep  # current_timestep starts from 1000
         )
-        prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep)
-        p_mu, std = P(noisy_latent, noise_prediction, current_snr, prev_snr)
-        q_mu = Q(noisy_latent, target_latent, current_snr, prev_snr)
-        q_mu_flat_normed = ((q_mu - p_mu) / std).flatten().detach().cpu().numpy()
+
+        prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep) # 0.08 for step 972
+
+        p_mu, std = P(noisy_latent, noise_prediction, current_snr, prev_snr) # p_mu has shape of latent but std is scalar. if we are in step 1000, P() predicts the mean of x999. we dont see the real image here, so we can call it prior
+
+        q_mu = Q(noisy_latent, target_latent, current_snr, prev_snr) # this line can be done only by sender (not recipient), and it will provide the guidance to choose the best prng index for noise selection. Q is just an interpolation between x0 (the real image = target latent) and x_t (noisy latent). since we see here the real image, we can call it posterior
+
+        q_mu_flat_normed = ((q_mu - p_mu) / std).flatten().detach().cpu().numpy()  # convert latent to vector (flat). also normalize it so a normal-prng-noise will have chance to be close to it
 
         manual_dkl = (
             None if manual_dkl_per_step is None else manual_dkl_per_step[step_index]
-        )
+        ) # the amount of information we want to send at this step
 
         sample, chunk_seeds, dkl = gaussian_channel_simulator.encode(
             q_mu_flat_normed, manual_dkl=manual_dkl, seed=step_index
-        )
+        )  # find the noise-indices that generate noise that is closest to q_mu. i think that sample is the closest noise to q_mu_flat_normed using the indices in chunk_seeds
         chunk_seeds_per_step.append(chunk_seeds)
         dkl_per_step.append(dkl)
         sample = torch.tensor(sample)
@@ -89,8 +93,8 @@ def encode(
             sample.reshape(noisy_latent.shape)
             .to(noisy_latent.device)
             .to(noisy_latent.dtype)
-        )
-        noisy_latent = reshaped_sample * std + p_mu
+        ) # back to shape 1,4,64,89 - the shape of the latent
+        noisy_latent = reshaped_sample * std + p_mu  # we take our best prediction of previous step (also the decoder will have it) and continue the process from there
         current_timestep = prev_timestep
         current_snr = prev_snr
 

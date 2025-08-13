@@ -20,7 +20,7 @@ def denoise(noisy_latent, latent_timestep, timestep_schedule, noise_prediction_m
     current_timestep = latent_timestep
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
 
-    timestep_schedule = [t for t in timestep_schedule if t < latent_timestep]
+    timestep_schedule = [t for t in timestep_schedule if t < latent_timestep] # keep only the relevent timesteps
 
     for prev_timestep in tqdm(
         timestep_schedule

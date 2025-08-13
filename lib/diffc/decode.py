@@ -35,21 +35,23 @@ def decode(
 
     device = noise_prediction_model.device
     dtype = noise_prediction_model.dtype
-
+    # This is just to find the VAE latent shape - that's it. not used anywhere
     dummy_image = torch.zeros((1, 3, image_height, image_width)).to(device).to(dtype)
     dummy_latent = noise_prediction_model.image_to_latent(dummy_image)
     
     torch.manual_seed(seed)
-    noisy_latent = torch.randn(dummy_latent.shape, device=device, dtype=dtype)
+    noisy_latent = torch.randn(dummy_latent.shape, device=device, dtype=dtype) # start with same noisy x1000
 
     current_timestep = 1000
     current_snr = noise_prediction_model.get_timestep_snr(current_timestep)
     for step_index, (prev_timestep, chunk_seeds, Dkl) in tqdm(enumerate(
-        zip(timestep_schedule, chunk_seeds_per_step, Dkl_per_step)
+        zip(timestep_schedule, chunk_seeds_per_step, Dkl_per_step) # same schedule as the compressor had.
     ), total=len(chunk_seeds_per_step)):
+
         noise_prediction = noise_prediction_model.predict_noise(
             noisy_latent, current_timestep
-        )
+        ) # get same noise prediction as compressor
+        
         prev_snr = noise_prediction_model.get_timestep_snr(prev_timestep)
         p_mu, std = P(noisy_latent, noise_prediction, current_snr, prev_snr)
         sample = gaussian_channel_simulator.decode(
@@ -58,7 +60,7 @@ def decode(
         reshaped_sample = (
             torch.tensor(sample).reshape(noisy_latent.shape).to(device).to(dtype)
         )
-        noisy_latent = reshaped_sample * std + p_mu
+        noisy_latent = reshaped_sample * std + p_mu # same line as encode.py
         current_timestep = prev_timestep
         current_snr = prev_snr
 

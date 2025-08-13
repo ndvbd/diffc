@@ -1,3 +1,6 @@
+# python3 decompress.py --config configs/SD-1.5-base.yaml --input_dir results/SD-1.5-base/kodak/compressed --output_dir results/SD-1.5-base/kodak/reconstructions
+# python3 decompress.py --config configs/SD-1.5-base.yaml --input_path results/SD-1.5-base/kodak/compressed/nad.diffc --output_dir results/SD-1.5-base/kodak/reconstructions
+
 import argparse
 from pathlib import Path
 import yaml
@@ -82,7 +85,7 @@ def decompress_file(input_path, output_path, noise_prediction_model,
         compressed_bytes, config.manual_dkl_per_step[:step_idx+1]
     )
 
-    timestep = config.encoding_timesteps[step_idx]
+    timestep = config.encoding_timesteps[step_idx]  # the 61st elements can be 200 for example
     
     # Configure model with caption
     noise_prediction_model.configure(
@@ -92,18 +95,18 @@ def decompress_file(input_path, output_path, noise_prediction_model,
         height
     )
     
-    # Get the noisy reconstruction    
+    # Get the noisy reconstruction   . Goes from step 1000 to 200 for example.
     noisy_recon = decode(
         width,
         height,
         config.encoding_timesteps,
         noise_prediction_model,
         gaussian_channel_simulator,
-        chunk_seeds_per_step,
+        chunk_seeds_per_step, # the compressed data-> list of seeds/indices of noise
         config.manual_dkl_per_step,
-        seed=0)
+        seed=0)  # output size 1,4,64, 89 -> the latent size
     
-    # Denoise
+    # Denoise  | Continues from step 200 for example, to step 0, and do only denoising without anymore information (no m
     recon_latent = denoise(
         noisy_recon,
         timestep,
@@ -112,7 +115,7 @@ def decompress_file(input_path, output_path, noise_prediction_model,
     )
     
     # Convert to image and save
-    recon_img_pt = noise_prediction_model.latent_to_image(recon_latent)
+    recon_img_pt = noise_prediction_model.latent_to_image(recon_latent)  # run the VAE decoder latent-> full size
     image_utils.torch_to_pil_img(recon_img_pt).save(output_path)
 
 def main():
@@ -144,6 +147,7 @@ def main():
         config.max_chunk_size, 
         config.chunk_padding
     )
+    print("loading denoiser network")
     noise_prediction_model = get_noise_prediction_model(config.model, config)
 
     # Process each file

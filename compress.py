@@ -1,3 +1,6 @@
+# python compress.py --config configs/SD-1.5-base.yaml --image_dir data/kodak --output_dir results/SD-1.5-base/kodak/compressed --recon_timestep 200
+# python compress.py --config configs/SD-1.5-base.yaml --image_path data/kodak/01.png --output_dir results/SD-1.5-base/kodak/compressed --recon_timestep 200
+
 import argparse
 from PIL import Image
 from pathlib import Path
@@ -81,8 +84,8 @@ def compress_image(image_path, output_path, noise_prediction_model,
     # Load and preprocess image
     img_pil = Image.open(image_path)
     img_width, img_height = img_pil.size
-    gt_pt = image_utils.pil_to_torch_img(img_pil)
-    gt_latent = noise_prediction_model.image_to_latent(gt_pt)
+    gt_pt = image_utils.pil_to_torch_img(img_pil) # 1,3,712,512
+    gt_latent = noise_prediction_model.image_to_latent(gt_pt) # 1,4,64,89
     
     # Configure model
     noise_prediction_model.configure(
@@ -143,7 +146,10 @@ def main():
         config.max_chunk_size, 
         config.chunk_padding
     )
+    print("getting noise pred model")
     noise_prediction_model = get_noise_prediction_model(config.model, config)
+
+    print("we have noise pred model")
 
     # Get captions if needed
     captions = {}
@@ -159,10 +165,10 @@ def main():
         compress_image(
             image_path, 
             output_path,
-            noise_prediction_model, 
-            gaussian_channel_simulator,
+            noise_prediction_model, # stable diff model
+            gaussian_channel_simulator, # the rcc thing
             config,
-            caption
+            caption # ""
         )
 
 if __name__ == "__main__":

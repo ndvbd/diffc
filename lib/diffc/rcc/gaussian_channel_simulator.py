@@ -22,7 +22,7 @@ class GaussianChannelSimulator:
         chunk_sizes = get_chunk_sizes(dkl, self.max_chunk_size, self.chunk_padding)
         chunk_seeds, sample = chunk_and_encode(
             mu, chunk_sizes=chunk_sizes, shared_seed=seed
-        )
+        )  # find the noise-indices that are closest to mu
 
         return sample, chunk_seeds, dkl
 

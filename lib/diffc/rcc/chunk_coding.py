@@ -40,7 +40,7 @@ def chunk_and_encode(mu, chunk_sizes, shared_seed=0):
         chunk_shared_seed = hash((shared_seed, i)) % (2 ** 32)
         seed, partition = reverse_channel_encode(
             mu_chunk, K=int(2 ** chunk_size), shared_seed=chunk_shared_seed
-        )
+        ) # this does the SEARCH over K noise generations to be pick the one closest to mu_chunk.
         seeds.append(seed)
         partitions.append(partition)
 
